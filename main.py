@@ -1,6 +1,6 @@
+from typing import List
 from fastapi import FastAPI, status, HTTPException
-from database import Base, engine
-from sqlalchemy.orm import Session
+from database import Base, engine, SessionLocal
 import models
 import schemas
 
@@ -15,10 +15,10 @@ def root():
     return "todooo"
 
 @app.post("/todo", status_code=status.HTTP_201_CREATED)
-def create_todo(todo: schemas.ToDo):
+def create_todo(todo: schemas.ToDoCreate):
 
     # create a new database session
-    session = Session(bind=engine, expire_on_commit=False)
+    session = SessionLocal()
 
     # create an instance of the ToDo database model
     tododb = models.ToDo(task = todo.task)
@@ -26,21 +26,19 @@ def create_todo(todo: schemas.ToDo):
     # add it to the session and commit it
     session.add(tododb)
     session.commit()
-
-    # grab the id given to the object from the database
-    id = tododb.id
+    session.refresh(tododb)
 
     # close the session
     session.close()
 
     # return the id
-    return f"created todo item with id {id}"
+    return tododb
 
-@app.get("/todo/{id}")
+@app.get("/todo/{id}", response_model=schemas.ToDo)
 def read_todo(id: int):
 
     # create a new database session
-    session = Session(bind=engine, expire_on_commit=False)
+    session = SessionLocal()
 
     # get the todo item with the given id
     todo = session.query(models.ToDo).get(id)
@@ -58,7 +56,7 @@ def read_todo(id: int):
 def update_todo(id: int, task: str):
 
     # create a new database session
-    session = Session(bind=engine, expire_on_commit=False)
+    session = SessionLocal()
 
     # get the todo item with the given id
     todo = session.query(models.ToDo).get(id)
@@ -81,7 +79,7 @@ def update_todo(id: int, task: str):
 def delete_todo(id: int):
 
     # create a new database session
-    session = Session(bind=engine, expire_on_commit=False)
+    session = SessionLocal()
 
     # get the todo item with the given id
     todo = session.query(models.ToDo).get(id)
@@ -96,10 +94,10 @@ def delete_todo(id: int):
 
     return None
 
-@app.get("/todo")
+@app.get("/todo", response_model=List[schemas.ToDo])
 def read_todo_list():
     # create a new database session
-    session = Session(bind=engine, expire_on_commit=False)
+    session = SessionLocal()
 
     # get all todo items
     todo_list = session.query(models.ToDo).all()
