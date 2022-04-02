@@ -1,14 +1,8 @@
-from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel
+from fastapi import FastAPI, status, HTTPException
+from database import Base, engine
 from sqlalchemy.orm import Session
-
-from database import Base, ToDo, engine
-
-
-# Create ToDoRequest Base Model
-class ToDoRequest(BaseModel):
-    task: str
-
+import models
+import schemas
 
 # Create the database
 Base.metadata.create_all(engine)
@@ -16,20 +10,18 @@ Base.metadata.create_all(engine)
 # Initialize app
 app = FastAPI()
 
-
 @app.get("/")
 def root():
     return "todooo"
 
-
 @app.post("/todo", status_code=status.HTTP_201_CREATED)
-def create_todo(todo: ToDoRequest):
+def create_todo(todo: schemas.ToDo):
 
     # create a new database session
     session = Session(bind=engine, expire_on_commit=False)
 
     # create an instance of the ToDo database model
-    tododb = ToDo(task=todo.task)
+    tododb = models.ToDo(task = todo.task)
 
     # add it to the session and commit it
     session.add(tododb)
@@ -44,7 +36,6 @@ def create_todo(todo: ToDoRequest):
     # return the id
     return f"created todo item with id {id}"
 
-
 @app.get("/todo/{id}")
 def read_todo(id: int):
 
@@ -52,7 +43,7 @@ def read_todo(id: int):
     session = Session(bind=engine, expire_on_commit=False)
 
     # get the todo item with the given id
-    todo = session.query(ToDo).get(id)
+    todo = session.query(models.ToDo).get(id)
 
     # close the session
     session.close()
@@ -63,7 +54,6 @@ def read_todo(id: int):
 
     return todo
 
-
 @app.put("/todo/{id}")
 def update_todo(id: int, task: str):
 
@@ -71,7 +61,7 @@ def update_todo(id: int, task: str):
     session = Session(bind=engine, expire_on_commit=False)
 
     # get the todo item with the given id
-    todo = session.query(ToDo).get(id)
+    todo = session.query(models.ToDo).get(id)
 
     # update todo item with the given task (if an item with the given id was found)
     if todo:
@@ -87,7 +77,6 @@ def update_todo(id: int, task: str):
 
     return todo
 
-
 @app.delete("/todo/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_todo(id: int):
 
@@ -95,7 +84,7 @@ def delete_todo(id: int):
     session = Session(bind=engine, expire_on_commit=False)
 
     # get the todo item with the given id
-    todo = session.query(ToDo).get(id)
+    todo = session.query(models.ToDo).get(id)
 
     # if todo item with given id exists, delete it from the database. Otherwise raise 404 error
     if todo:
@@ -107,14 +96,13 @@ def delete_todo(id: int):
 
     return None
 
-
 @app.get("/todo")
 def read_todo_list():
     # create a new database session
     session = Session(bind=engine, expire_on_commit=False)
 
     # get all todo items
-    todo_list = session.query(ToDo).all()
+    todo_list = session.query(models.ToDo).all()
 
     # close the session
     session.close()
