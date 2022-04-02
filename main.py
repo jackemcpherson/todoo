@@ -1,3 +1,4 @@
+from asyncio import tasks
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -65,9 +66,16 @@ def read_todo(id: int):
 
 
 @app.put("/todo/{id}")
-def update_todo(id: int):
-    return "update todo item with id {id}"
-
+def update_todo(id: int, task: str):
+    session = Session(bind=engine, expire_on_commit=False)
+    todo = session.query(ToDo).get(id)
+    if todo:
+        todo.task = task
+        session.commit()
+    session.close()
+    if not todo:
+        raise HTTPException(status_code=404, detail=f"todo item with id {id} not found")
+    return todo
 
 @app.delete("/todo/{id}")
 def delete_todo(id: int):
